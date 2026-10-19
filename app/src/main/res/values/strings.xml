@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TimeKeeper</string>
+    <string name="subtitle">语音报时</string>
+    <string name="unit_minutes">分钟</string>
+    <string name="default_interval">5</string>
+    <string name="start_reporting">开始报时</string>
+    <string name="stop_reporting">停止报时</string>
+    <string name="notification_channel_name">报时通知</string>
+    <string name="notification_channel_desc">报时运行期间的常驻通知</string>
+    <string name="notification_running">报时运行中 · 每 %1$d 分钟播报一次</string>
+    <string name="toast_started">已开始报时，每 %1$d 分钟播报一次</string>
+    <string name="toast_invalid_interval">请输入 %1$d–%2$d 之间的分钟数，已恢复默认 %3$d</string>
+</resources>
