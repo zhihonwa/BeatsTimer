@@ -21,8 +21,6 @@ jobs:
         with:
           gradle-version: "8.7"
 
-      - name: 准备 Android SDK
-        uses: android-actions/setup-android@v3
 
       - name: 编译 Debug APK
         run: gradle assembleDebug --no-daemon
