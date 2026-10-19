@@ -11,6 +11,12 @@ import java.util.concurrent.atomic.AtomicReference
 
 class TtsManager(context: Context) {
 
+    fun interface Listener {
+        fun onTtsInitFailed(message: String)
+    }
+
+    var listener: Listener? = null
+
     private val appContext = context.applicationContext
     private val audioManager =
         appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -21,21 +27,30 @@ class TtsManager(context: Context) {
     @Volatile
     private var ttsReady = false
 
+    @Volatile
+    private var pendingText: String? = null
+
     init {
         tts = TextToSpeech(appContext, ::onTtsInit)
     }
 
     private fun onTtsInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS && setupLanguage()) {
-            ttsReady = true
-        } else {
-            tts?.shutdown()
+        val engine = tts
+        if (status != TextToSpeech.SUCCESS || engine == null) {
             tts = null
+            listener?.onTtsInitFailed(appContext.getString(R.string.tts_init_failed))
+            return
+        }
+        setupLanguage(engine)
+        engine.setOnUtteranceProgressListener(utteranceListener)
+        ttsReady = true
+        pendingText?.let { text ->
+            pendingText = null
+            doSpeak(engine, text)
         }
     }
 
-    private fun setupLanguage(): Boolean {
-        val engine = tts ?: return false
+    private fun setupLanguage(engine: TextToSpeech) {
         val candidates = listOf(
             Locale.SIMPLIFIED_CHINESE,
             Locale.CHINA,
@@ -47,16 +62,22 @@ class TtsManager(context: Context) {
             if (result != TextToSpeech.LANG_MISSING_DATA &&
                 result != TextToSpeech.LANG_NOT_SUPPORTED
             ) {
-                engine.setOnUtteranceProgressListener(utteranceListener)
-                return true
+                return
             }
         }
-        return false
     }
 
     fun speak(text: String) {
-        val engine = tts ?: return
-        if (!ttsReady || text.isBlank()) return
+        val engine = tts
+        if (engine == null || !ttsReady) {
+            if (text.isNotBlank()) pendingText = text
+            return
+        }
+        doSpeak(engine, text)
+    }
+
+    private fun doSpeak(engine: TextToSpeech, text: String) {
+        if (text.isBlank()) return
         requestAudioFocus()
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
     }
@@ -102,6 +123,7 @@ class TtsManager(context: Context) {
     fun shutdown() {
         abandonAudioFocus()
         ttsReady = false
+        pendingText = null
         tts?.apply {
             stop()
             setOnUtteranceProgressListener(null)

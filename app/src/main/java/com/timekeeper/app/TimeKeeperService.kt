@@ -14,6 +14,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
+import android.widget.Toast
 import java.util.Calendar
 
 class TimeKeeperService : Service() {
@@ -28,12 +29,15 @@ class TimeKeeperService : Service() {
     @Volatile
     private var running = false
 
-    private val tickRunnable = object : Runnable {
+    private val countdownRunnable = object : Runnable {
         override fun run() {
-            speakCurrentTime()
-            if (running) {
-                handler.postDelayed(this, intervalMinutes * 60_000L)
+            if (!running) return
+            remainingSeconds--
+            if (remainingSeconds <= 0) {
+                speakCurrentTime()
+                remainingSeconds = intervalMinutes * 60
             }
+            handler.postDelayed(this, 1000L)
         }
     }
 
@@ -42,7 +46,11 @@ class TimeKeeperService : Service() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         intervalMinutes = prefs.getInt(KEY_INTERVAL, DEFAULT_INTERVAL)
             .coerceIn(MIN_INTERVAL, MAX_INTERVAL)
-        ttsManager = TtsManager(this)
+        ttsManager = TtsManager(this).apply {
+            listener = TtsManager.Listener { message ->
+                Toast.makeText(this@TimeKeeperService, message, Toast.LENGTH_LONG).show()
+            }
+        }
         createNotificationChannel()
     }
 
@@ -64,13 +72,16 @@ class TimeKeeperService : Service() {
         running = true
         isRunning = true
         acquireWakeLock()
-        handler.post(tickRunnable)
+        remainingSeconds = intervalMinutes * 60
+        speakCurrentTime()
+        handler.postDelayed(countdownRunnable, 1000L)
     }
 
     private fun stopTicking() {
         running = false
         isRunning = false
-        handler.removeCallbacks(tickRunnable)
+        remainingSeconds = 0
+        handler.removeCallbacks(countdownRunnable)
         releaseWakeLock()
     }
 
@@ -88,14 +99,20 @@ class TimeKeeperService : Service() {
 
     private fun startForegroundWithNotification() {
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(
+        when {
+            Build.VERSION.SDK_INT >= 34 -> startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+
+            Build.VERSION.SDK_INT >= 29 -> startForeground(
                 NOTIFICATION_ID,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
             )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+
+            else -> startForeground(NOTIFICATION_ID, notification)
         }
     }
 
@@ -164,6 +181,10 @@ class TimeKeeperService : Service() {
 
         @Volatile
         var isRunning = false
+            private set
+
+        @Volatile
+        var remainingSeconds = 0
             private set
     }
 }
