@@ -79,8 +79,8 @@ class MainActivity : Activity() {
     }
 
     private fun toggleReporting() {
-        if (TimeKeeperService.isRunning) {
-            stopService(Intent(this, TimeKeeperService::class.java))
+        if (TimeKeeperService.isReporting) {
+            sendServiceAction(TimeKeeperService.ACTION_PAUSE)
         } else {
             val interval = resolveInterval() ?: return
             getSharedPreferences(TimeKeeperService.PREFS_NAME, MODE_PRIVATE)
@@ -90,7 +90,7 @@ class MainActivity : Activity() {
             ensureNotificationPermission()
             ensureBatteryOptimizationExemption()
             val intent = Intent(this, TimeKeeperService::class.java)
-                .setAction(TimeKeeperService.ACTION_START)
+                .setAction(TimeKeeperService.ACTION_RESUME)
                 .putExtra(TimeKeeperService.EXTRA_INTERVAL_MINUTES, interval)
             startForegroundService(intent)
             Toast.makeText(
@@ -99,6 +99,12 @@ class MainActivity : Activity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
+    }
+
+    private fun sendServiceAction(action: String) {
+        startForegroundService(
+            Intent(this, TimeKeeperService::class.java).setAction(action)
+        )
     }
 
     private fun resolveInterval(): Int? {
@@ -150,18 +156,18 @@ class MainActivity : Activity() {
     }
 
     private fun refreshButtonState() {
-        val running = TimeKeeperService.isRunning
+        val reporting = TimeKeeperService.isReporting
         binding.startButton.setText(
-            if (running) R.string.stop_reporting else R.string.start_reporting
+            if (reporting) R.string.stop_reporting else R.string.start_reporting
         )
-        binding.intervalInput.isEnabled = !running
+        binding.intervalInput.isEnabled = !reporting
         renderCountdown()
     }
 
     private fun renderCountdown() {
-        val running = TimeKeeperService.isRunning
-        binding.countdownText.visibility = if (running) View.VISIBLE else View.GONE
-        if (running) {
+        val reporting = TimeKeeperService.isReporting
+        binding.countdownText.visibility = if (reporting) View.VISIBLE else View.GONE
+        if (reporting) {
             val total = TimeKeeperService.remainingSeconds.coerceAtLeast(0)
             binding.countdownText.text = String.format("%02d:%02d", total / 60, total % 60)
         }
