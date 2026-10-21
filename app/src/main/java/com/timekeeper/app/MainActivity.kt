@@ -2,7 +2,10 @@ package com.timekeeper.app
 
 import android.Manifest
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -27,6 +30,12 @@ class MainActivity : Activity() {
         }
     }
 
+    private val stateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            refreshButtonState()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -44,7 +53,18 @@ class MainActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
+        val filter = IntentFilter(TimeKeeperService.ACTION_STATE_CHANGED)
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(stateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(stateReceiver, filter)
+        }
         refreshButtonState()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unregisterReceiver(stateReceiver)
     }
 
     override fun onResume() {
@@ -61,7 +81,6 @@ class MainActivity : Activity() {
     private fun toggleReporting() {
         if (TimeKeeperService.isRunning) {
             stopService(Intent(this, TimeKeeperService::class.java))
-            refreshButtonState()
         } else {
             val interval = resolveInterval() ?: return
             getSharedPreferences(TimeKeeperService.PREFS_NAME, MODE_PRIVATE)
@@ -74,7 +93,6 @@ class MainActivity : Activity() {
                 .setAction(TimeKeeperService.ACTION_START)
                 .putExtra(TimeKeeperService.EXTRA_INTERVAL_MINUTES, interval)
             startForegroundService(intent)
-            refreshButtonState()
             Toast.makeText(
                 this,
                 getString(R.string.toast_started, interval),

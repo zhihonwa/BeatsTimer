@@ -73,6 +73,7 @@ class TimeKeeperService : Service() {
         isRunning = true
         acquireWakeLock()
         remainingSeconds = intervalMinutes * 60
+        notifyStateChanged()
         speakCurrentTime()
         handler.postDelayed(countdownRunnable, 1000L)
     }
@@ -83,6 +84,11 @@ class TimeKeeperService : Service() {
         remainingSeconds = 0
         handler.removeCallbacks(countdownRunnable)
         releaseWakeLock()
+        notifyStateChanged()
+    }
+
+    private fun notifyStateChanged() {
+        sendBroadcast(Intent(ACTION_STATE_CHANGED).setPackage(packageName))
     }
 
     private fun speakCurrentTime() {
@@ -172,6 +178,7 @@ class TimeKeeperService : Service() {
         private const val NOTIFICATION_ID = 1001
         const val ACTION_START = "com.timekeeper.app.action.START"
         const val ACTION_STOP = "com.timekeeper.app.action.STOP"
+        const val ACTION_STATE_CHANGED = "com.timekeeper.app.action.STATE_CHANGED"
         const val EXTRA_INTERVAL_MINUTES = "extra_interval_minutes"
         const val PREFS_NAME = "time_keeper_prefs"
         const val KEY_INTERVAL = "interval_minutes"

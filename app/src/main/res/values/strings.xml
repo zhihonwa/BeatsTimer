@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">TimeKeeper</string>
     <string name="subtitle">语音报时</string>
+    <string name="label_interval">间隔</string>
     <string name="unit_minutes">分钟</string>
     <string name="default_interval">5</string>
     <string name="start_reporting">开始报时</string>
