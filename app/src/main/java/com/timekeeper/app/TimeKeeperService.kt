@@ -1,5 +1,6 @@
 package com.timekeeper.app
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,11 +10,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
-import android.media.AudioAttributes
-import android.media.MediaMetadata
-import android.media.MediaPlayer
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.media.MediaMetadata
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -29,7 +28,7 @@ class TimeKeeperService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var ttsManager: TtsManager
     private lateinit var mediaSession: MediaSession
-    private var silentPlayer: MediaPlayer? = null
+    private lateinit var musicPlayer: MusicPlayer
     private var wakeLock: PowerManager.WakeLock? = null
 
     @Volatile
@@ -38,6 +37,9 @@ class TimeKeeperService : Service() {
     @Volatile
     private var running = false
 
+    @Volatile
+    private var lastSpeakAtMillis = 0L
+
     private val countdownRunnable = object : Runnable {
         override fun run() {
             if (!running) return
@@ -45,6 +47,7 @@ class TimeKeeperService : Service() {
             if (remainingSeconds <= 0) {
                 speakCurrentTime()
                 remainingSeconds = intervalMinutes * 60
+                scheduleFallbackAlarm()
             }
             handler.postDelayed(this, 1000L)
         }
@@ -55,6 +58,10 @@ class TimeKeeperService : Service() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         intervalMinutes = prefs.getInt(KEY_INTERVAL, DEFAULT_INTERVAL)
             .coerceIn(MIN_INTERVAL, MAX_INTERVAL)
+        musicPlayer = MusicPlayer(this).apply {
+            setVolume(prefs.getInt(KEY_VOLUME, DEFAULT_VOLUME_PERCENT) / 100f)
+            setMusicUri(prefs.getString(KEY_MUSIC_URI, null)?.let { Uri.parse(it) })
+        }
         ttsManager = TtsManager(this).apply {
             listener = TtsManager.Listener { message ->
                 Toast.makeText(this@TimeKeeperService, message, Toast.LENGTH_LONG).show()
@@ -88,11 +95,23 @@ class TimeKeeperService : Service() {
         }
         when (intent?.action) {
             ACTION_PAUSE -> pauseReporting()
-            null -> {
-                val wasRunning = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .getBoolean(KEY_RUNNING, false)
-                if (wasRunning) startReporting() else pauseReporting()
+
+            ACTION_TICK -> {
+                if (!running && isReportingRequested()) {
+                    startReporting()
+                } else {
+                    handleFallbackTick()
+                }
             }
+
+            ACTION_SET_VOLUME -> musicPlayer.setVolume(
+                (intent?.getIntExtra(EXTRA_VOLUME_PERCENT, DEFAULT_VOLUME_PERCENT)
+                    ?: DEFAULT_VOLUME_PERCENT) / 100f
+            )
+
+            ACTION_SET_MUSIC -> applyMusicSource(intent?.getStringExtra(EXTRA_MUSIC_URI))
+
+            null -> if (isReportingRequested()) startReporting() else pauseReporting()
 
             else -> startReporting()
         }
@@ -104,17 +123,15 @@ class TimeKeeperService : Service() {
         if (running) return
         running = true
         isReporting = true
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_RUNNING, true)
-            .apply()
+        setReportingRequested(true)
         acquireWakeLock()
-        startSilentAudio()
+        musicPlayer.start()
         remainingSeconds = intervalMinutes * 60
         updateMediaSession(PlaybackState.STATE_PLAYING)
         updateNotification()
         notifyStateChanged()
         speakCurrentTime()
+        scheduleFallbackAlarm()
         handler.postDelayed(countdownRunnable, 1000L)
     }
 
@@ -124,24 +141,86 @@ class TimeKeeperService : Service() {
         isReporting = false
         remainingSeconds = 0
         handler.removeCallbacks(countdownRunnable)
+        cancelFallbackAlarm()
+        musicPlayer.pause()
         releaseWakeLock()
-        stopSilentAudio()
         updateMediaSession(PlaybackState.STATE_PAUSED)
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_RUNNING, false)
-            .apply()
+        setReportingRequested(false)
         if (wasRunning) {
             updateNotification()
             notifyStateChanged()
         }
     }
 
+    private fun handleFallbackTick() {
+        if (!running) return
+        speakCurrentTime()
+        remainingSeconds = intervalMinutes * 60
+        scheduleFallbackAlarm()
+    }
+
+    private fun applyMusicSource(uriString: String?) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putString(KEY_MUSIC_URI, uriString)
+            .apply()
+        musicPlayer.setMusicUri(uriString?.let { Uri.parse(it) })
+        if (running) {
+            musicPlayer.pause()
+            musicPlayer.start()
+        }
+    }
+
+    private fun isReportingRequested(): Boolean =
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(KEY_RUNNING, false)
+
+    private fun setReportingRequested(value: Boolean) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_RUNNING, value)
+            .apply()
+    }
+
+    private fun scheduleFallbackAlarm() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val triggerAt = System.currentTimeMillis() + intervalMinutes * 60_000L
+        val pendingIntent = buildAlarmPendingIntent()
+        try {
+            if (Build.VERSION.SDK_INT >= 31 && !alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
+            }
+        } catch (e: SecurityException) {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
+        } catch (e: Exception) {
+            Log.w(TAG, "兜底闹钟设置失败", e)
+        }
+    }
+
+    private fun cancelFallbackAlarm() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val pendingIntent = buildAlarmPendingIntent()
+        alarmManager.cancel(pendingIntent)
+        pendingIntent.cancel()
+    }
+
+    private fun buildAlarmPendingIntent(): PendingIntent =
+        PendingIntent.getForegroundService(
+            this,
+            REQUEST_CODE_ALARM,
+            Intent(this, TimeKeeperService::class.java).setAction(ACTION_TICK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
     private fun notifyStateChanged() {
         sendBroadcast(Intent(ACTION_STATE_CHANGED).setPackage(packageName))
     }
 
     private fun speakCurrentTime() {
+        val now = System.currentTimeMillis()
+        if (now - lastSpeakAtMillis < SPEAK_DEDUP_MILLIS) return
+        lastSpeakAtMillis = now
         val text = formatTimeText(Calendar.getInstance())
         Log.d(TAG, "播报: $text")
         ttsManager.speak(text)
@@ -151,43 +230,6 @@ class TimeKeeperService : Service() {
         val hour = cal.get(Calendar.HOUR_OF_DAY)
         val minute = cal.get(Calendar.MINUTE)
         return if (minute == 0) "${hour}点整" else "${hour}点${minute}分"
-    }
-
-    private fun startSilentAudio() {
-        if (silentPlayer != null) return
-        try {
-            val attrs = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build()
-            silentPlayer = MediaPlayer().apply {
-                setAudioAttributes(attrs)
-                setDataSource(
-                    this@TimeKeeperService,
-                    Uri.parse("android.resource://${packageName}/${R.raw.silence}")
-                )
-                isLooping = true
-                setVolume(0f, 0f)
-                prepare()
-                start()
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "静音保活音频启动失败", e)
-            silentPlayer?.release()
-            silentPlayer = null
-        }
-    }
-
-    private fun stopSilentAudio() {
-        silentPlayer?.let { player ->
-            try {
-                if (player.isPlaying) player.stop()
-            } catch (e: Exception) {
-                Log.w(TAG, "静音保活音频停止异常", e)
-            }
-            player.release()
-        }
-        silentPlayer = null
     }
 
     private fun updateMediaSession(state: Int) {
@@ -324,7 +366,7 @@ class TimeKeeperService : Service() {
 
     override fun onDestroy() {
         pauseReporting()
-        stopSilentAudio()
+        musicPlayer.release()
         ttsManager.shutdown()
         mediaSession.release()
         super.onDestroy()
@@ -338,14 +380,25 @@ class TimeKeeperService : Service() {
         private const val NOTIFICATION_ID = 1001
         private const val REQUEST_CODE_START = 11
         private const val REQUEST_CODE_STOP = 12
+        private const val REQUEST_CODE_ALARM = 21
+        private const val SPEAK_DEDUP_MILLIS = 30_000L
         const val ACTION_RESUME = "com.timekeeper.app.action.RESUME"
         const val ACTION_PAUSE = "com.timekeeper.app.action.PAUSE"
+        const val ACTION_TICK = "com.timekeeper.app.action.TICK"
+        const val ACTION_SET_VOLUME = "com.timekeeper.app.action.SET_VOLUME"
+        const val ACTION_SET_MUSIC = "com.timekeeper.app.action.SET_MUSIC"
         const val ACTION_STATE_CHANGED = "com.timekeeper.app.action.STATE_CHANGED"
         const val EXTRA_INTERVAL_MINUTES = "extra_interval_minutes"
+        const val EXTRA_VOLUME_PERCENT = "extra_volume_percent"
+        const val EXTRA_MUSIC_URI = "extra_music_uri"
         const val PREFS_NAME = "time_keeper_prefs"
         const val KEY_INTERVAL = "interval_minutes"
         const val KEY_RUNNING = "reporting_running"
+        const val KEY_VOLUME = "music_volume_percent"
+        const val KEY_MUSIC_URI = "music_uri"
+        const val KEY_MUSIC_NAME = "music_name"
         const val DEFAULT_INTERVAL = 5
+        const val DEFAULT_VOLUME_PERCENT = 60
         const val MIN_INTERVAL = 1
         const val MAX_INTERVAL = 240
 

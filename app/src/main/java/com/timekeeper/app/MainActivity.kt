@@ -2,6 +2,8 @@ package com.timekeeper.app
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
+import android.app.AlarmManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -13,8 +15,10 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.provider.OpenableColumns
 import android.provider.Settings
 import android.view.View
+import android.widget.SeekBar
 import android.widget.Toast
 import com.timekeeper.app.databinding.ActivityMainBinding
 
@@ -49,6 +53,33 @@ class MainActivity : Activity() {
         binding.intervalInput.setText(savedInterval.toString())
 
         binding.startButton.setOnClickListener { toggleReporting() }
+        binding.pickMusicButton.setOnClickListener { pickMusic() }
+        binding.clearMusicButton.setOnClickListener { clearMusic() }
+        binding.stabilityButton.setOnClickListener { showStabilityDialog() }
+        binding.musicVolumeSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                binding.musicVolumeLabel.text =
+                    getString(R.string.volume_percent, progress)
+                if (!fromUser) return
+                getSharedPreferences(TimeKeeperService.PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putInt(TimeKeeperService.KEY_VOLUME, progress)
+                    .apply()
+                if (TimeKeeperService.isReporting) {
+                    startForegroundService(
+                        Intent(this@MainActivity, TimeKeeperService::class.java)
+                            .setAction(TimeKeeperService.ACTION_SET_VOLUME)
+                            .putExtra(TimeKeeperService.EXTRA_VOLUME_PERCENT, progress)
+                    )
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+
+        updateMusicUi()
     }
 
     override fun onStart() {
@@ -87,8 +118,7 @@ class MainActivity : Activity() {
                 .edit()
                 .putInt(TimeKeeperService.KEY_INTERVAL, interval)
                 .apply()
-            ensureNotificationPermission()
-            ensureBatteryOptimizationExemption()
+            ensureStabilitySettings()
             val intent = Intent(this, TimeKeeperService::class.java)
                 .setAction(TimeKeeperService.ACTION_RESUME)
                 .putExtra(TimeKeeperService.EXTRA_INTERVAL_MINUTES, interval)
@@ -130,6 +160,109 @@ class MainActivity : Activity() {
         return value
     }
 
+    private fun pickMusic() {
+        try {
+            startActivityForResult(
+                Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "audio/*"
+                    addFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                    )
+                },
+                REQUEST_CODE_PICK_MUSIC
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, R.string.toast_no_file_picker, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun clearMusic() {
+        getSharedPreferences(TimeKeeperService.PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .remove(TimeKeeperService.KEY_MUSIC_URI)
+            .remove(TimeKeeperService.KEY_MUSIC_NAME)
+            .apply()
+        updateMusicUi()
+        if (TimeKeeperService.isReporting) {
+            startForegroundService(
+                Intent(this, TimeKeeperService::class.java)
+                    .setAction(TimeKeeperService.ACTION_SET_MUSIC)
+            )
+        }
+        Toast.makeText(this, R.string.toast_music_cleared, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateMusicUi() {
+        val prefs = getSharedPreferences(TimeKeeperService.PREFS_NAME, MODE_PRIVATE)
+        val uri = prefs.getString(TimeKeeperService.KEY_MUSIC_URI, null)
+        val name = prefs.getString(TimeKeeperService.KEY_MUSIC_NAME, null)
+        if (uri != null) {
+            binding.musicNameText.text = name ?: uri
+            binding.clearMusicButton.visibility = View.VISIBLE
+        } else {
+            binding.musicNameText.setText(R.string.music_builtin_track)
+            binding.clearMusicButton.visibility = View.GONE
+        }
+        val volume = prefs.getInt(
+            TimeKeeperService.KEY_VOLUME,
+            TimeKeeperService.DEFAULT_VOLUME_PERCENT
+        ).coerceIn(0, 100)
+        binding.musicVolumeSeek.progress = volume
+        binding.musicVolumeLabel.text = getString(R.string.volume_percent, volume)
+    }
+
+    private fun queryDisplayName(uri: Uri): String {
+        var name = uri.lastPathSegment ?: getString(R.string.music_builtin_track)
+        try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (index >= 0) name = cursor.getString(index)
+                    }
+                }
+        } catch (e: Exception) {
+        }
+        return name
+    }
+
+    private fun showStabilityDialog() {
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        val batteryOk = pm.isIgnoringBatteryOptimizations(packageName)
+        val notificationOk = Build.VERSION.SDK_INT < 33 ||
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        val alarmOk = Build.VERSION.SDK_INT < 31 ||
+            (getSystemService(ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+        val message = buildString {
+            appendLine(if (batteryOk) "✓ 已忽略电池优化（Doze 豁免）" else "✗ 未忽略电池优化")
+            appendLine(if (notificationOk) "✓ 通知权限已授予" else "✗ 通知权限未授予")
+            appendLine(
+                if (alarmOk) "✓ 精确闹钟已允许（深 Doze 兜底生效）"
+                else "✗ 精确闹钟未允许（兜底降级为非精确定时）"
+            )
+            appendLine()
+            appendLine("厂商后台管理需在系统设置中手动开启（无系统接口）：")
+            appendLine("小米：设置→应用设置→TimeKeeper→省电策略→无限制；自启动→允许")
+            appendLine("华为：设置→应用→应用启动管理→TimeKeeper→关闭自动管理，三项全允许")
+            appendLine("OPPO/一加：设置→电池→应用耗电管理→允许后台运行")
+            appendLine("vivo：设置→电池→后台耗电管理→允许后台高耗电；自启动→允许")
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.stability_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.stability_grant) { _, _ -> ensureStabilitySettings() }
+            .setNegativeButton(R.string.stability_close, null)
+            .show()
+    }
+
+    private fun ensureStabilitySettings() {
+        ensureNotificationPermission()
+        ensureBatteryOptimizationExemption()
+        ensureExactAlarmPermission()
+    }
+
     private fun ensureNotificationPermission() {
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -155,6 +288,21 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun ensureExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT < 31) return
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        if (alarmManager.canScheduleExactAlarms()) return
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:$packageName")
+                )
+            )
+        } catch (e: Exception) {
+        }
+    }
+
     private fun refreshButtonState() {
         val reporting = TimeKeeperService.isReporting
         binding.startButton.setText(
@@ -173,6 +321,38 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_CODE_PICK_MUSIC || resultCode != RESULT_OK) return
+        val uri = data?.data ?: return
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (e: Exception) {
+        }
+        val name = queryDisplayName(uri)
+        getSharedPreferences(TimeKeeperService.PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putString(TimeKeeperService.KEY_MUSIC_URI, uri.toString())
+            .putString(TimeKeeperService.KEY_MUSIC_NAME, name)
+            .apply()
+        updateMusicUi()
+        if (TimeKeeperService.isReporting) {
+            startForegroundService(
+                Intent(this, TimeKeeperService::class.java)
+                    .setAction(TimeKeeperService.ACTION_SET_MUSIC)
+                    .putExtra(TimeKeeperService.EXTRA_MUSIC_URI, uri.toString())
+            )
+        }
+        Toast.makeText(
+            this,
+            getString(R.string.toast_music_selected, name),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -183,5 +363,6 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQUEST_CODE_NOTIFICATION = 100
+        private const val REQUEST_CODE_PICK_MUSIC = 101
     }
 }
