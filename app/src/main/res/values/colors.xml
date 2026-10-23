@@ -1,4 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#EFF6FF</color>
+    <color name="primary">#0F766E</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#CCFBF1</color>
+    <color name="on_primary_container">#134E4A</color>
+    <color name="accent">#EA580C</color>
+    <color name="on_accent">#FFFFFF</color>
+
+    <color name="background">#F7FAFA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#EEF4F4</color>
+    <color name="outline">#DCE7E7</color>
+
+    <color name="on_surface">#0F172A</color>
+    <color name="on_surface_variant">#475569</color>
+    <color name="disabled_text">#94A3B8</color>
+
+    <color name="success">#0F766E</color>
+    <color name="warning">#EA580C</color>
+    <color name="error">#DC2626</color>
+
+    <color name="ripple_on_primary">#33FFFFFF</color>
+    <color name="ripple_on_surface">#1F0F766E</color>
+
+    <color name="ic_launcher_background">#CCFBF1</color>
 </resources>

@@ -2,8 +2,8 @@ package com.timekeeper.app
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.AlarmManager
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -15,12 +15,16 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.view.View
 import android.widget.SeekBar
 import android.widget.Toast
 import com.timekeeper.app.databinding.ActivityMainBinding
+import java.util.Locale
 
 class MainActivity : Activity() {
 
@@ -80,6 +84,7 @@ class MainActivity : Activity() {
         })
 
         updateMusicUi()
+        renderCountdown()
     }
 
     override fun onStart() {
@@ -111,6 +116,7 @@ class MainActivity : Activity() {
 
     private fun toggleReporting() {
         if (TimeKeeperService.isReporting) {
+            hapticTap()
             sendServiceAction(TimeKeeperService.ACTION_PAUSE)
         } else {
             val interval = resolveInterval() ?: return
@@ -123,6 +129,7 @@ class MainActivity : Activity() {
                 .setAction(TimeKeeperService.ACTION_RESUME)
                 .putExtra(TimeKeeperService.EXTRA_INTERVAL_MINUTES, interval)
             startForegroundService(intent)
+            hapticTap()
             Toast.makeText(
                 this,
                 getString(R.string.toast_started, interval),
@@ -314,10 +321,35 @@ class MainActivity : Activity() {
 
     private fun renderCountdown() {
         val reporting = TimeKeeperService.isReporting
-        binding.countdownText.visibility = if (reporting) View.VISIBLE else View.GONE
         if (reporting) {
             val total = TimeKeeperService.remainingSeconds.coerceAtLeast(0)
-            binding.countdownText.text = String.format("%02d:%02d", total / 60, total % 60)
+            binding.countdownText.text =
+                String.format(Locale.US, "%02d:%02d", total / 60, total % 60)
+            binding.countdownText.setTextColor(getColor(R.color.primary))
+            binding.statusText.setText(R.string.status_running)
+        } else {
+            binding.countdownText.setText(R.string.countdown_idle)
+            binding.countdownText.setTextColor(getColor(R.color.disabled_text))
+            binding.statusText.setText(R.string.status_paused)
+        }
+    }
+
+    private fun hapticTap() {
+        try {
+            if (Build.VERSION.SDK_INT >= 31) {
+                val manager =
+                    getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                manager.defaultVibrator.vibrate(
+                    VibrationEffect.createOneShot(15L, VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+                vibrator.vibrate(
+                    VibrationEffect.createOneShot(15L, VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            }
+        } catch (e: Exception) {
         }
     }
 
