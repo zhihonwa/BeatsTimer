@@ -135,27 +135,39 @@
                     tools:text="00:05" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/status_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/status_paused"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="13sp" />
-
-            <Button
-                android:id="@+id/start_button"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:background="@drawable/bg_primary_button"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="@string/start_reporting"
-                android:textColor="@color/on_primary"
-                android:textSize="17sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/start_button"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="2"
+                    android:background="@drawable/bg_primary_button"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:text="@string/start_reporting"
+                    android:textColor="@color/on_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/pause_button"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_outline_button"
+                    android:enabled="false"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:text="@string/pause_reporting"
+                    android:textColor="@color/button_outline_text"
+                    android:textSize="16sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
@@ -176,7 +188,7 @@
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:text="@string/pick_music"
-                android:textColor="@color/primary"
+                android:textColor="@color/button_outline_text"
                 android:textSize="14sp" />
 
             <LinearLayout

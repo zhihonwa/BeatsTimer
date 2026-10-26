@@ -57,6 +57,7 @@ class MainActivity : Activity() {
         binding.intervalInput.setText(savedInterval.toString())
 
         binding.startButton.setOnClickListener { toggleReporting() }
+        binding.pauseButton.setOnClickListener { togglePauseTimer() }
         binding.pickMusicButton.setOnClickListener { pickMusic() }
         binding.clearMusicButton.setOnClickListener { clearMusic() }
         binding.stabilityButton.setOnClickListener { showStabilityDialog() }
@@ -136,6 +137,17 @@ class MainActivity : Activity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
+    }
+
+    private fun togglePauseTimer() {
+        hapticTap()
+        sendServiceAction(
+            if (TimeKeeperService.isPaused) {
+                TimeKeeperService.ACTION_RESUME_TIMER
+            } else {
+                TimeKeeperService.ACTION_PAUSE_TIMER
+            }
+        )
     }
 
     private fun sendServiceAction(action: String) {
@@ -323,6 +335,14 @@ class MainActivity : Activity() {
             if (reporting) R.string.stop_reporting else R.string.start_reporting
         )
         binding.intervalInput.isEnabled = !reporting
+        binding.pauseButton.isEnabled = reporting
+        binding.pauseButton.setText(
+            if (TimeKeeperService.isPaused) {
+                R.string.resume_reporting
+            } else {
+                R.string.pause_reporting
+            }
+        )
         renderCountdown()
     }
 
@@ -340,12 +360,10 @@ class MainActivity : Activity() {
                 elapsed / 3600,
                 elapsed % 3600 / 60
             )
-            binding.statusText.setText(R.string.status_running)
         } else {
             binding.countdownText.setText(R.string.countdown_idle)
             binding.countdownText.setTextColor(getColor(R.color.disabled_text))
             binding.elapsedText.setText(R.string.countdown_idle)
-            binding.statusText.setText(R.string.status_paused)
         }
     }
 

@@ -97,6 +97,10 @@ class TimeKeeperService : Service() {
         when (intent?.action) {
             ACTION_PAUSE -> pauseReporting()
 
+            ACTION_PAUSE_TIMER -> pauseTimer()
+
+            ACTION_RESUME_TIMER -> resumeTimer()
+
             ACTION_TICK -> {
                 if (!running && isReportingRequested()) {
                     startReporting()
@@ -124,6 +128,7 @@ class TimeKeeperService : Service() {
         if (running) return
         running = true
         isReporting = true
+        isPaused = false
         setReportingRequested(true)
         acquireWakeLock()
         musicPlayer.start()
@@ -141,6 +146,7 @@ class TimeKeeperService : Service() {
         val wasRunning = running
         running = false
         isReporting = false
+        isPaused = false
         remainingSeconds = 0
         elapsedSeconds = 0
         handler.removeCallbacks(countdownRunnable)
@@ -153,6 +159,32 @@ class TimeKeeperService : Service() {
             updateNotification()
             notifyStateChanged()
         }
+    }
+
+    private fun pauseTimer() {
+        if (!running) return
+        running = false
+        isPaused = true
+        handler.removeCallbacks(countdownRunnable)
+        cancelFallbackAlarm()
+        musicPlayer.pause()
+        releaseWakeLock()
+        updateMediaSession(PlaybackState.STATE_PAUSED)
+        updateNotification()
+        notifyStateChanged()
+    }
+
+    private fun resumeTimer() {
+        if (running || !isReporting) return
+        running = true
+        isPaused = false
+        acquireWakeLock()
+        musicPlayer.start()
+        updateMediaSession(PlaybackState.STATE_PLAYING)
+        updateNotification()
+        notifyStateChanged()
+        scheduleFallbackAlarm()
+        handler.postDelayed(countdownRunnable, 1000L)
     }
 
     private fun handleFallbackTick() {
@@ -296,10 +328,10 @@ class TimeKeeperService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(
-                if (running) {
-                    getString(R.string.notification_running, intervalMinutes)
-                } else {
-                    getString(R.string.notification_paused)
+                when {
+                    running -> getString(R.string.notification_running, intervalMinutes)
+                    isPaused -> getString(R.string.notification_timer_paused)
+                    else -> getString(R.string.notification_paused)
                 }
             )
             .setOngoing(true)
@@ -387,6 +419,8 @@ class TimeKeeperService : Service() {
         private const val SPEAK_DEDUP_MILLIS = 30_000L
         const val ACTION_RESUME = "com.timekeeper.app.action.RESUME"
         const val ACTION_PAUSE = "com.timekeeper.app.action.PAUSE"
+        const val ACTION_PAUSE_TIMER = "com.timekeeper.app.action.PAUSE_TIMER"
+        const val ACTION_RESUME_TIMER = "com.timekeeper.app.action.RESUME_TIMER"
         const val ACTION_TICK = "com.timekeeper.app.action.TICK"
         const val ACTION_SET_VOLUME = "com.timekeeper.app.action.SET_VOLUME"
         const val ACTION_SET_MUSIC = "com.timekeeper.app.action.SET_MUSIC"
@@ -415,6 +449,10 @@ class TimeKeeperService : Service() {
 
         @Volatile
         var elapsedSeconds = 0
+            private set
+
+        @Volatile
+        var isPaused = false
             private set
     }
 }
