@@ -151,7 +151,7 @@ class TimeKeeperService : Service() {
         elapsedSeconds = 0
         handler.removeCallbacks(countdownRunnable)
         cancelFallbackAlarm()
-        musicPlayer.pause()
+        musicPlayer.stop()
         releaseWakeLock()
         updateMediaSession(PlaybackState.STATE_PAUSED)
         setReportingRequested(false)
@@ -201,7 +201,7 @@ class TimeKeeperService : Service() {
             .apply()
         musicPlayer.setMusicUri(uriString?.let { Uri.parse(it) })
         if (running) {
-            musicPlayer.pause()
+            musicPlayer.stop()
             musicPlayer.start()
         }
     }

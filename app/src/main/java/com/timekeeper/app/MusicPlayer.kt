@@ -43,18 +43,34 @@ class MusicPlayer(context: Context) {
             applyVolume()
             return
         }
+        val existing = player
+        if (existing != null && resumeExisting(existing)) return
+        startFresh()
+    }
+
+    private fun resumeExisting(mp: MediaPlayer): Boolean {
+        return try {
+            if (!mp.isPlaying) mp.start()
+            playing = true
+            ducked = false
+            if (musicUri != null) requestFocus()
+            applyVolume()
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "音乐恢复播放失败，将重新创建播放器", e)
+            releasePlayer()
+            false
+        }
+    }
+
+    private fun startFresh() {
         val useUserMusic = musicUri != null
         if (useUserMusic) {
             requestFocus()
         }
         try {
             player = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
+                setAudioAttributes(mediaAttributes())
                 setDataSource(appContext, musicUri ?: builtinTrackUri())
                 isLooping = true
                 val initial = if (useUserMusic) volume else BUILTIN_VOLUME
@@ -79,12 +95,7 @@ class MusicPlayer(context: Context) {
         try {
             musicUri = null
             player = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
+                setAudioAttributes(mediaAttributes())
                 setDataSource(appContext, builtinTrackUri())
                 isLooping = true
                 setVolume(BUILTIN_VOLUME, BUILTIN_VOLUME)
@@ -92,6 +103,7 @@ class MusicPlayer(context: Context) {
                 start()
             }
             playing = true
+            ducked = false
         } catch (e: Exception) {
             Log.w(TAG, "内置保活音轨启动失败", e)
             releasePlayer()
@@ -100,6 +112,18 @@ class MusicPlayer(context: Context) {
     }
 
     fun pause() {
+        val mp = player ?: return
+        try {
+            if (mp.isPlaying) mp.pause()
+        } catch (e: Exception) {
+            Log.w(TAG, "音乐暂停异常", e)
+        }
+        playing = false
+        ducked = false
+        abandonFocus()
+    }
+
+    fun stop() {
         releasePlayer()
         abandonFocus()
         playing = false
@@ -107,8 +131,14 @@ class MusicPlayer(context: Context) {
     }
 
     fun release() {
-        pause()
+        stop()
     }
+
+    private fun mediaAttributes(): AudioAttributes =
+        AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
 
     private fun builtinTrackUri(): Uri =
         Uri.parse("android.resource://${appContext.packageName}/${R.raw.keepalive}")
@@ -153,18 +183,13 @@ class MusicPlayer(context: Context) {
                 applyVolume()
             }
 
-            AudioManager.AUDIOFOCUS_LOSS -> pause()
+            AudioManager.AUDIOFOCUS_LOSS -> stop()
         }
     }
 
     private fun requestFocus() {
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
+            .setAudioAttributes(mediaAttributes())
             .setOnAudioFocusChangeListener { change -> handleFocusChange(change) }
             .build()
         focusRequest = request
