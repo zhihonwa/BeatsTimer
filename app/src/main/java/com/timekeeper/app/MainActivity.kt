@@ -206,10 +206,13 @@ class MainActivity : Activity() {
         val uri = prefs.getString(TimeKeeperService.KEY_MUSIC_URI, null)
         val name = prefs.getString(TimeKeeperService.KEY_MUSIC_NAME, null)
         if (uri != null) {
-            binding.musicNameText.text = name ?: uri
+            val displayName = name ?: getString(R.string.music_unknown_file)
+            binding.musicNameText.text = displayName
+            binding.musicNameText.contentDescription = displayName
             binding.clearMusicButton.visibility = View.VISIBLE
         } else {
-            binding.musicNameText.setText(R.string.music_builtin_track)
+            binding.musicNameText.setText(R.string.music_none)
+            binding.musicNameText.contentDescription = null
             binding.clearMusicButton.visibility = View.GONE
         }
         val volume = prefs.getInt(
@@ -221,7 +224,7 @@ class MainActivity : Activity() {
     }
 
     private fun queryDisplayName(uri: Uri): String {
-        var name = uri.lastPathSegment ?: getString(R.string.music_builtin_track)
+        var name = uri.lastPathSegment ?: getString(R.string.music_unknown_file)
         try {
             contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
                 ?.use { cursor ->
@@ -326,14 +329,22 @@ class MainActivity : Activity() {
     private fun renderCountdown() {
         val reporting = TimeKeeperService.isReporting
         if (reporting) {
-            val total = TimeKeeperService.remainingSeconds.coerceAtLeast(0)
+            val remaining = TimeKeeperService.remainingSeconds.coerceAtLeast(0)
             binding.countdownText.text =
-                String.format(Locale.US, "%02d:%02d", total / 60, total % 60)
+                String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60)
             binding.countdownText.setTextColor(getColor(R.color.primary))
+            val elapsed = TimeKeeperService.elapsedSeconds.coerceAtLeast(0)
+            binding.elapsedText.text = String.format(
+                Locale.US,
+                "%02d:%02d",
+                elapsed / 3600,
+                elapsed % 3600 / 60
+            )
             binding.statusText.setText(R.string.status_running)
         } else {
             binding.countdownText.setText(R.string.countdown_idle)
             binding.countdownText.setTextColor(getColor(R.color.disabled_text))
+            binding.elapsedText.setText(R.string.countdown_idle)
             binding.statusText.setText(R.string.status_paused)
         }
     }

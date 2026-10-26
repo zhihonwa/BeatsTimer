@@ -43,6 +43,7 @@ class TimeKeeperService : Service() {
     private val countdownRunnable = object : Runnable {
         override fun run() {
             if (!running) return
+            elapsedSeconds++
             remainingSeconds--
             if (remainingSeconds <= 0) {
                 speakCurrentTime()
@@ -126,6 +127,7 @@ class TimeKeeperService : Service() {
         setReportingRequested(true)
         acquireWakeLock()
         musicPlayer.start()
+        elapsedSeconds = 0
         remainingSeconds = intervalMinutes * 60
         updateMediaSession(PlaybackState.STATE_PLAYING)
         updateNotification()
@@ -140,6 +142,7 @@ class TimeKeeperService : Service() {
         running = false
         isReporting = false
         remainingSeconds = 0
+        elapsedSeconds = 0
         handler.removeCallbacks(countdownRunnable)
         cancelFallbackAlarm()
         musicPlayer.pause()
@@ -408,6 +411,10 @@ class TimeKeeperService : Service() {
 
         @Volatile
         var remainingSeconds = 0
+            private set
+
+        @Volatile
+        var elapsedSeconds = 0
             private set
     }
 }

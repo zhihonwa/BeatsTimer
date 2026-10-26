@@ -101,20 +101,48 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
+                android:fontFeatureSettings="tnum"
                 android:text="@string/countdown_idle"
                 android:textColor="@color/disabled_text"
                 android:textSize="52sp"
                 android:textStyle="bold"
                 tools:text="00:59" />
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_elapsed"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/elapsed_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:minWidth="76dp"
+                    android:fontFeatureSettings="tnum"
+                    android:text="@string/countdown_idle"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="15sp"
+                    tools:text="00:05" />
+            </LinearLayout>
+
             <TextView
                 android:id="@+id/status_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/status_paused"
                 android:textColor="@color/on_surface_variant"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
 
             <Button
                 android:id="@+id/start_button"
@@ -138,26 +166,18 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <LinearLayout
+            <Button
+                android:id="@+id/pick_music_button"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_music" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="@string/label_music"
-                    android:textColor="@color/on_surface_variant"
-                    android:textSize="15sp" />
-            </LinearLayout>
+                android:layout_height="48dp"
+                android:layout_gravity="start"
+                android:background="@drawable/bg_outline_button"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/pick_music"
+                android:textColor="@color/primary"
+                android:textSize="14sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -166,34 +186,22 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <Button
-                    android:id="@+id/pick_music_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_outline_button"
-                    android:minWidth="0dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:text="@string/pick_music"
-                    android:textColor="@color/primary"
-                    android:textSize="14sp" />
-
                 <TextView
                     android:id="@+id/music_name_text"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:ellipsize="end"
-                    android:maxLines="2"
-                    android:text="@string/music_builtin_track"
-                    android:textColor="@color/on_surface_variant"
-                    android:textSize="13sp" />
+                    android:ellipsize="middle"
+                    android:maxLines="1"
+                    android:text="@string/music_none"
+                    android:textColor="@color/on_surface"
+                    android:textSize="14sp" />
 
                 <ImageButton
                     android:id="@+id/clear_music_button"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
+                    android:layout_marginStart="8dp"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/cd_clear_music"
                     android:src="@drawable/ic_close"
