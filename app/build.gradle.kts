@@ -13,8 +13,8 @@ android {
         applicationId = "com.timekeeper.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "1.6.2"
+        versionCode = providers.gradleProperty("ciVersionCode").orNull?.toIntOrNull() ?: 11
+        versionName = providers.gradleProperty("ciVersionName").orNull ?: "1.6.5"
     }
 
     buildTypes {
@@ -39,7 +39,7 @@ android {
     applicationVariants.all {
         outputs.all {
             val output = this as BaseVariantOutputImpl
-            output.outputFileName = "timekeeper_${versionName}_${name}.apk"
+            output.outputFileName = "fitbeats_${versionName}_${name}.apk"
         }
     }
 }

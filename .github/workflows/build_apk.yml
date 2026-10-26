@@ -1,7 +1,13 @@
 name: Build APK
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -21,14 +27,44 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - name: 解析版本号
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            TAG="v$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "semver=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "解析结果: tag=${TAG}"
 
       - name: 编译 Debug APK
-        run: gradle assembleDebug --no-daemon
+        run: >
+          gradle assembleDebug --no-daemon
+          -PciVersionName=${{ steps.version.outputs.semver }}
+          -PciVersionCode=${{ github.run_number }}
+
+      - name: 整理产物（按版本号命名）
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/debug/*.apk "release/FitBeats_${{ steps.version.outputs.tag }}.apk"
+          ls -la release/
 
       - name: 上传 APK 产物
         uses: actions/upload-artifact@v4
         with:
-          name: timekeeper-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: fitbeats-apk
+          path: release/*.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: 发布到 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "release/FitBeats_${{ steps.version.outputs.tag }}.apk" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --generate-notes

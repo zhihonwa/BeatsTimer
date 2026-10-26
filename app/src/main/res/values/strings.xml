@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">TimeKeeper</string>
-    <string name="subtitle">语音报时 · 后台稳定运行</string>
+    <string name="app_name">FitBeats</string>
+    <string name="subtitle">语音报时 · 节奏音乐</string>
     <string name="label_interval">间隔</string>
     <string name="unit_minutes">分钟</string>
     <string name="default_interval">5</string>

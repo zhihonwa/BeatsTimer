@@ -257,6 +257,7 @@ class MainActivity : Activity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         val alarmOk = Build.VERSION.SDK_INT < 31 ||
             (getSystemService(ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+        val appName = getString(R.string.app_name)
         val message = buildString {
             appendLine(if (batteryOk) "✓ 已忽略电池优化" else "✗ 未忽略电池优化")
             appendLine(if (notificationOk) "✓ 通知权限已授予" else "✗ 通知权限未授予")
@@ -267,9 +268,9 @@ class MainActivity : Activity() {
             appendLine()
             appendLine("厂商后台管理需在系统设置中手动开启：")
             appendLine()
-            appendLine("小米：设置→应用设置→TimeKeeper→省电策略→无限制；自启动→允许")
+            appendLine("小米：设置→应用设置→$appName→省电策略→无限制；自启动→允许")
             appendLine()
-            appendLine("华为：设置→应用→应用启动管理→TimeKeeper→关闭自动管理，三项全允许")
+            appendLine("华为：设置→应用→应用启动管理→$appName→关闭自动管理，三项全允许")
             appendLine()
             appendLine("OPPO/一加：设置→电池→应用耗电管理→允许后台运行")
             appendLine()
