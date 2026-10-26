@@ -243,17 +243,21 @@ class MainActivity : Activity() {
         val alarmOk = Build.VERSION.SDK_INT < 31 ||
             (getSystemService(ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
         val message = buildString {
-            appendLine(if (batteryOk) "✓ 已忽略电池优化（Doze 豁免）" else "✗ 未忽略电池优化")
+            appendLine(if (batteryOk) "✓ 已忽略电池优化" else "✗ 未忽略电池优化")
             appendLine(if (notificationOk) "✓ 通知权限已授予" else "✗ 通知权限未授予")
             appendLine(
-                if (alarmOk) "✓ 精确闹钟已允许（深 Doze 兜底生效）"
+                if (alarmOk) "✓ 精确闹钟已允许"
                 else "✗ 精确闹钟未允许（兜底降级为非精确定时）"
             )
             appendLine()
-            appendLine("厂商后台管理需在系统设置中手动开启（无系统接口）：")
+            appendLine("厂商后台管理需在系统设置中手动开启：")
+            appendLine()
             appendLine("小米：设置→应用设置→TimeKeeper→省电策略→无限制；自启动→允许")
+            appendLine()
             appendLine("华为：设置→应用→应用启动管理→TimeKeeper→关闭自动管理，三项全允许")
+            appendLine()
             appendLine("OPPO/一加：设置→电池→应用耗电管理→允许后台运行")
+            appendLine()
             appendLine("vivo：设置→电池→后台耗电管理→允许后台高耗电；自启动→允许")
         }
         AlertDialog.Builder(this)
