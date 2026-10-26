@@ -130,6 +130,7 @@ class TimeKeeperService : Service() {
         isReporting = true
         isPaused = false
         setReportingRequested(true)
+        syncMusicSettingsFromPrefs()
         acquireWakeLock()
         musicPlayer.start()
         elapsedSeconds = 0
@@ -194,15 +195,25 @@ class TimeKeeperService : Service() {
         scheduleFallbackAlarm()
     }
 
+    private fun syncMusicSettingsFromPrefs() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        musicPlayer.setMusicUri(prefs.getString(KEY_MUSIC_URI, null)?.let { Uri.parse(it) })
+        musicPlayer.setVolume(prefs.getInt(KEY_VOLUME, DEFAULT_VOLUME_PERCENT) / 100f)
+    }
+
     private fun applyMusicSource(uriString: String?) {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .edit()
             .putString(KEY_MUSIC_URI, uriString)
             .apply()
         musicPlayer.setMusicUri(uriString?.let { Uri.parse(it) })
-        if (running) {
-            musicPlayer.stop()
-            musicPlayer.start()
+        when {
+            running -> {
+                musicPlayer.stop()
+                musicPlayer.start()
+            }
+
+            isPaused -> musicPlayer.stop()
         }
     }
 

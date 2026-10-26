@@ -13,8 +13,8 @@ android {
         applicationId = "com.timekeeper.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 9
-        versionName = "1.6.1"
+        versionCode = 10
+        versionName = "1.6.2"
     }
 
     buildTypes {
