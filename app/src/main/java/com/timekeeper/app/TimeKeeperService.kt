@@ -144,7 +144,7 @@ class TimeKeeperService : Service() {
     }
 
     private fun pauseReporting() {
-        val wasRunning = running
+        val wasActive = running || isPaused || isReporting
         running = false
         isReporting = false
         isPaused = false
@@ -156,7 +156,7 @@ class TimeKeeperService : Service() {
         releaseWakeLock()
         updateMediaSession(PlaybackState.STATE_PAUSED)
         setReportingRequested(false)
-        if (wasRunning) {
+        if (wasActive) {
             updateNotification()
             notifyStateChanged()
         }
