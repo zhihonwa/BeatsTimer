@@ -64,6 +64,9 @@ class MainActivity : Activity() {
         binding.customizePromptText.setOnClickListener {
             startActivity(Intent(this, VoicePromptActivity::class.java))
         }
+        binding.aboutButton.setOnClickListener {
+            startActivity(Intent(this, AboutActivity::class.java))
+        }
         binding.musicVolumeSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 binding.musicVolumeLabel.text =
@@ -353,21 +356,22 @@ class MainActivity : Activity() {
     private fun renderCountdown() {
         val reporting = TimeKeeperService.isReporting
         if (reporting) {
-            val remaining = TimeKeeperService.remainingSeconds.coerceAtLeast(0)
+            val remaining = TimeKeeperService.computeRemainingSeconds().coerceAtLeast(0)
             binding.countdownText.text =
                 String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60)
             binding.countdownText.setTextColor(getColor(R.color.primary))
-            val elapsed = TimeKeeperService.elapsedSeconds.coerceAtLeast(0)
+            val elapsed = TimeKeeperService.computeElapsedSeconds().coerceAtLeast(0)
             binding.elapsedText.text = String.format(
                 Locale.US,
-                "%02d:%02d",
+                "%02d:%02d:%02d",
                 elapsed / 3600,
-                elapsed % 3600 / 60
+                elapsed % 3600 / 60,
+                elapsed % 60
             )
         } else {
             binding.countdownText.setText(R.string.countdown_idle)
             binding.countdownText.setTextColor(getColor(R.color.disabled_text))
-            binding.elapsedText.setText(R.string.countdown_idle)
+            binding.elapsedText.setText(R.string.elapsed_idle)
         }
     }
 

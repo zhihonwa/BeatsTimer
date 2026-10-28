@@ -19,6 +19,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
 import java.util.Calendar
@@ -40,16 +41,12 @@ class TimeKeeperService : Service() {
     @Volatile
     private var lastSpeakAtMillis = 0L
 
+    private var nextReportSecond = 0
+
     private val countdownRunnable = object : Runnable {
         override fun run() {
             if (!running) return
-            elapsedSeconds++
-            remainingSeconds--
-            if (remainingSeconds <= 0) {
-                speakCurrentTime(elapsedSeconds / 60)
-                remainingSeconds = intervalMinutes * 60
-                scheduleFallbackAlarm()
-            }
+            checkAndReport()
             handler.postDelayed(this, 1000L)
         }
     }
@@ -133,8 +130,9 @@ class TimeKeeperService : Service() {
         syncMusicSettingsFromPrefs()
         acquireWakeLock()
         musicPlayer.start()
-        elapsedSeconds = 0
-        remainingSeconds = intervalMinutes * 60
+        intervalSeconds = intervalMinutes * 60
+        resetTimerOrigin()
+        nextReportSecond = intervalMinutes * 60
         updateMediaSession(PlaybackState.STATE_PLAYING)
         updateNotification()
         notifyStateChanged()
@@ -148,8 +146,8 @@ class TimeKeeperService : Service() {
         running = false
         isReporting = false
         isPaused = false
-        remainingSeconds = 0
-        elapsedSeconds = 0
+        nextReportSecond = 0
+        resetTimerOrigin()
         handler.removeCallbacks(countdownRunnable)
         cancelFallbackAlarm()
         musicPlayer.stop()
@@ -166,6 +164,7 @@ class TimeKeeperService : Service() {
         if (!running) return
         running = false
         isPaused = true
+        pauseStartedRealtimeMillis = SystemClock.elapsedRealtime()
         handler.removeCallbacks(countdownRunnable)
         cancelFallbackAlarm()
         musicPlayer.pause()
@@ -179,6 +178,10 @@ class TimeKeeperService : Service() {
         if (running || !isReporting) return
         running = true
         isPaused = false
+        if (pauseStartedRealtimeMillis > 0L) {
+            pausedAccumMillis += SystemClock.elapsedRealtime() - pauseStartedRealtimeMillis
+            pauseStartedRealtimeMillis = 0L
+        }
         acquireWakeLock()
         musicPlayer.start()
         updateMediaSession(PlaybackState.STATE_PLAYING)
@@ -189,10 +192,27 @@ class TimeKeeperService : Service() {
     }
 
     private fun handleFallbackTick() {
+        checkAndReport()
+    }
+
+    private fun checkAndReport() {
         if (!running) return
-        speakCurrentTime(elapsedSeconds / 60)
-        remainingSeconds = intervalMinutes * 60
-        scheduleFallbackAlarm()
+        val elapsedSec = computeElapsedSeconds()
+        var elapsedMinutes = -1
+        while (nextReportSecond > 0 && elapsedSec >= nextReportSecond) {
+            elapsedMinutes = nextReportSecond / 60
+            nextReportSecond += intervalMinutes * 60
+        }
+        if (elapsedMinutes >= 0) {
+            speakCurrentTime(elapsedMinutes)
+            scheduleFallbackAlarm()
+        }
+    }
+
+    private fun resetTimerOrigin() {
+        startedRealtimeMillis = SystemClock.elapsedRealtime()
+        pausedAccumMillis = 0L
+        pauseStartedRealtimeMillis = 0L
     }
 
     private fun syncMusicSettingsFromPrefs() {
@@ -228,8 +248,10 @@ class TimeKeeperService : Service() {
     }
 
     private fun scheduleFallbackAlarm() {
+        if (nextReportSecond <= 0) return
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val triggerAt = System.currentTimeMillis() + intervalMinutes * 60_000L
+        val remainingSec = (nextReportSecond - computeElapsedSeconds()).coerceAtLeast(1)
+        val triggerAt = System.currentTimeMillis() + remainingSec * 1000L
         val pendingIntent = buildAlarmPendingIntent()
         try {
             if (Build.VERSION.SDK_INT >= 31 && !alarmManager.canScheduleExactAlarms()) {
@@ -501,15 +523,39 @@ class TimeKeeperService : Service() {
             private set
 
         @Volatile
-        var remainingSeconds = 0
-            private set
-
-        @Volatile
-        var elapsedSeconds = 0
-            private set
-
-        @Volatile
         var isPaused = false
             private set
+
+        @Volatile
+        var startedRealtimeMillis = 0L
+
+        @Volatile
+        var pausedAccumMillis = 0L
+
+        @Volatile
+        var pauseStartedRealtimeMillis = 0L
+
+        @Volatile
+        var intervalSeconds = DEFAULT_INTERVAL * 60
+
+        fun computeElapsedSeconds(): Int {
+            if (!isReporting || startedRealtimeMillis == 0L) return 0
+            val now = SystemClock.elapsedRealtime()
+            val pausedNow =
+                if (isPaused && pauseStartedRealtimeMillis > 0L) {
+                    now - pauseStartedRealtimeMillis
+                } else {
+                    0L
+                }
+            val activeMillis = now - startedRealtimeMillis - pausedAccumMillis - pausedNow
+            return (activeMillis / 1000L).toInt().coerceAtLeast(0)
+        }
+
+        fun computeRemainingSeconds(): Int {
+            if (!isReporting) return 0
+            val seconds = intervalSeconds
+            if (seconds <= 0) return 0
+            return (seconds - computeElapsedSeconds() % seconds).coerceIn(0, seconds)
+        }
     }
 }

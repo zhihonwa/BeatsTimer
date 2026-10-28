@@ -16,7 +16,7 @@
         android:paddingBottom="32dp">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
@@ -28,13 +28,22 @@
                 android:src="@drawable/ic_clock" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:layout_marginStart="10dp"
                 android:text="@string/app_name"
                 android:textColor="@color/on_surface"
                 android:textSize="26sp"
                 android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/about_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_about"
+                android:src="@drawable/ic_info" />
         </LinearLayout>
 
         <TextView
@@ -229,12 +238,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
-                    android:minWidth="76dp"
+                    android:minWidth="88dp"
                     android:fontFeatureSettings="tnum"
-                    android:text="@string/countdown_idle"
+                    android:text="@string/elapsed_idle"
                     android:textColor="@color/on_surface_variant"
                     android:textSize="15sp"
-                    tools:text="00:05" />
+                    tools:text="00:07:34" />
             </LinearLayout>
 
             <LinearLayout
