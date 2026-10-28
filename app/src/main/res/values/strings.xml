@@ -54,6 +54,5 @@
     <string name="about_bpm_title">运动音乐 BPM 建议</string>
     <string name="about_bpm_body">运动的音乐节奏（BPM，每分钟节拍数）与步频越接近，越能带动步伐、提升耐力。推荐区间：\n\n慢走 / 散步：80–100 BPM\n快走：100–130 BPM\n慢跑：120–140 BPM\n常规跑步：140–160 BPM\n快跑：160–180 BPM\n\n提示：先按自己的舒适步频选歌，再逐步提高音乐 BPM 来提升强度。</string>
     <string name="about_repo_title">开源与支持</string>
-    <string name="about_repo_body">本项目完全免费使用。如果它帮到了你，欢迎点亮一颗 Star 支持一下。</string>
-    <string name="about_repo_link">https://github.com/zhihonwa/BeatsTimer</string>
+    <string name="about_repo_body">本项目完全免费使用。如果它帮到了你，欢迎点亮一颗 Star 支持一下。\nhttps://github.com/zhihonwa/BeatsTimer</string>
 </resources>
