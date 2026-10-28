@@ -19,6 +19,17 @@ BeatsTimer 是一款为运动场景设计的 Android 应用：一边播放你喜
 
 系统要求：Android 8.0（API 26）及以上。
 
+## 界面预览
+
+<p align="center">
+  <img src="screenshots/1-main.jpg" width="200" alt="主界面" />
+  <img src="screenshots/2-privileges.jpg" width="200" alt="运行稳定性设置" />
+  <img src="screenshots/3-options.jpg" width="200" alt="语音提示定制" />
+  <img src="screenshots/4-about.jpg" width="200" alt="关于" />
+</p>
+
+从左到右依次为：**主界面**（报时间隔 / 倒计时与总时长 / 开始-停止、暂停-恢复 / 选音乐与音量 / 稳定性设置入口）、**运行稳定性设置**（电池优化、通知、精确闹钟授权及厂商后台指引）、**语音提示定制**（勾选并自定义"已完成 xx 分钟""请补充水分""坚持运动，加油"播报）、**关于**（应用介绍、使用步骤、运动音乐 BPM 建议与开源支持）。
+
 ## 工程结构
 
 ```
@@ -87,3 +98,6 @@ git push origin v1.6.5
 > **后台稳定性提示**：部分国产手机（小米 / 华为 / OPPO / vivo 等）后台管控较激进，除在 app 内允许"通知 / 电池优化 / 精确闹钟"外，还需在系统设置中为 BeatsTimer 开启 **自启动** 并将后台管控设为 **无限制 / 允许后台运行**（具体路径见 app 内"运行稳定性设置"弹窗）。另外请勿在系统设置中对本应用执行"强行停止"。
 >
 > **提示**：若设备未安装中文 TTS 语音包（如部分原生系统），请到 系统设置 → 无障碍 / 语言 → 文字转语音（TTS）中安装中文语音数据。
+## 开源声明
+
+本项目开源且完全免费使用，源码托管于 GitHub（[zhihonwa/BeatsTimer](https://github.com/zhihonwa/BeatsTimer)）。如果它帮到了你，欢迎点亮一颗 Star 支持一下。
