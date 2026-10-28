@@ -48,13 +48,13 @@ jobs:
       - name: 整理产物（按版本号命名）
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/debug/*.apk "release/FitBeats_${{ steps.version.outputs.tag }}.apk"
+          cp app/build/outputs/apk/debug/*.apk "release/BeatsTimer_${{ steps.version.outputs.tag }}.apk"
           ls -la release/
 
       - name: 上传 APK 产物
         uses: actions/upload-artifact@v4
         with:
-          name: fitbeats-apk
+          name: beatstimer-apk
           path: release/*.apk
           if-no-files-found: error
           retention-days: 30
@@ -65,6 +65,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${{ steps.version.outputs.tag }}" \
-            "release/FitBeats_${{ steps.version.outputs.tag }}.apk" \
+            "release/BeatsTimer_${{ steps.version.outputs.tag }}.apk" \
             --title "${{ steps.version.outputs.tag }}" \
             --generate-notes

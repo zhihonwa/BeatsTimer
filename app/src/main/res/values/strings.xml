@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FitBeats</string>
-    <string name="subtitle">语音报时 · 节奏音乐</string>
-    <string name="label_interval">间隔</string>
+    <string name="app_name">BeatsTimer</string>
+    <string name="subtitle">选择动感音乐 · 开始运动计时</string>
+    <string name="label_interval">报时间隔</string>
     <string name="unit_minutes">分钟</string>
     <string name="default_interval">5</string>
     <string name="countdown_idle">--:--</string>
@@ -17,7 +17,7 @@
     <string name="notification_timer_paused">计时已暂停 · 点击“恢复”继续</string>
     <string name="notification_paused">报时已停止 · 点击“开始报时”继续</string>
     <string name="tts_init_failed">语音引擎初始化失败，请检查系统 TTS 设置后重试</string>
-    <string name="pick_music">选择音乐</string>
+    <string name="pick_music">选择运动音乐</string>
     <string name="music_none">未选音乐</string>
     <string name="music_unknown_file">音频文件</string>
     <string name="cd_clear_music">清除已选音乐</string>
