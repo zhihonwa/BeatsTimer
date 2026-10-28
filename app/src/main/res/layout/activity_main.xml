@@ -153,7 +153,7 @@
 
                 <EditText
                     android:id="@+id/interval_input"
-                    android:layout_width="96dp"
+                    android:layout_width="60dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="12dp"
                     android:gravity="center"
@@ -173,6 +173,23 @@
                     android:text="@string/unit_minutes"
                     android:textColor="@color/on_surface_variant"
                     android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/customize_prompt_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/customize_entry"
+                    android:textColor="@color/primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <View

@@ -32,4 +32,16 @@
     <string name="toast_no_file_picker">未找到文件选择器</string>
     <string name="toast_started">已开始报时，每 %1$d 分钟播报一次</string>
     <string name="toast_invalid_interval">请输入 %1$d–%2$d 之间的分钟数，已恢复默认 %3$d</string>
+    <string name="customize_entry">定制</string>
+    <string name="prompt_page_title">语音提示定制</string>
+    <string name="prompt_page_desc">勾选需要的语音提示，播报文本可自行编辑（用 xx 表示已运行分钟数）</string>
+    <string name="prompt_elapsed_label">运行 10 分钟后，增加语音播报</string>
+    <string name="prompt_elapsed_default">已完成 xx 分钟</string>
+    <string name="prompt_water_label">每隔 15 分钟，增加语音播报</string>
+    <string name="prompt_water_default">请补充水分</string>
+    <string name="prompt_cheer_label">每隔 30 分钟，增加语音播报</string>
+    <string name="prompt_cheer_default">坚持运动，加油</string>
+    <string name="prompt_minutes_hint">用 xx 表示分钟数</string>
+    <string name="prompt_save">保存</string>
+    <string name="prompt_saved">语音提示已保存</string>
 </resources>

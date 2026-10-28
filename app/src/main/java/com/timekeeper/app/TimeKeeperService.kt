@@ -46,7 +46,7 @@ class TimeKeeperService : Service() {
             elapsedSeconds++
             remainingSeconds--
             if (remainingSeconds <= 0) {
-                speakCurrentTime()
+                speakCurrentTime(elapsedSeconds / 60)
                 remainingSeconds = intervalMinutes * 60
                 scheduleFallbackAlarm()
             }
@@ -138,7 +138,7 @@ class TimeKeeperService : Service() {
         updateMediaSession(PlaybackState.STATE_PLAYING)
         updateNotification()
         notifyStateChanged()
-        speakCurrentTime()
+        speakCurrentTime(0)
         scheduleFallbackAlarm()
         handler.postDelayed(countdownRunnable, 1000L)
     }
@@ -190,7 +190,7 @@ class TimeKeeperService : Service() {
 
     private fun handleFallbackTick() {
         if (!running) return
-        speakCurrentTime()
+        speakCurrentTime(elapsedSeconds / 60)
         remainingSeconds = intervalMinutes * 60
         scheduleFallbackAlarm()
     }
@@ -263,14 +263,46 @@ class TimeKeeperService : Service() {
         sendBroadcast(Intent(ACTION_STATE_CHANGED).setPackage(packageName))
     }
 
-    private fun speakCurrentTime() {
+    private fun speakCurrentTime(elapsedMinutes: Int) {
         val now = System.currentTimeMillis()
         if (now - lastSpeakAtMillis < SPEAK_DEDUP_MILLIS) return
         lastSpeakAtMillis = now
-        val text = formatTimeText(Calendar.getInstance())
+        val text = buildReportText(elapsedMinutes)
         Log.d(TAG, "播报: $text")
         ttsManager.speak(text)
     }
+
+    private fun buildReportText(elapsedMinutes: Int): String {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val text = StringBuilder(formatTimeText(Calendar.getInstance()))
+        if (elapsedMinutes >= ELAPSED_PROMPT_THRESHOLD_MINUTES &&
+            prefs.getBoolean(KEY_PROMPT_ELAPSED_ENABLED, true)
+        ) {
+            val template = resolvePromptText(KEY_PROMPT_ELAPSED_TEXT, DEFAULT_PROMPT_ELAPSED_TEXT)
+            text.append(REPORT_SEPARATOR)
+                .append(template.replace(ELAPSED_PLACEHOLDER, elapsedMinutes.toString()))
+        }
+        if (elapsedMinutes > 0 &&
+            elapsedMinutes % WATER_PROMPT_INTERVAL_MINUTES == 0 &&
+            prefs.getBoolean(KEY_PROMPT_WATER_ENABLED, true)
+        ) {
+            text.append(REPORT_SEPARATOR)
+                .append(resolvePromptText(KEY_PROMPT_WATER_TEXT, DEFAULT_PROMPT_WATER_TEXT))
+        }
+        if (elapsedMinutes > 0 &&
+            elapsedMinutes % CHEER_PROMPT_INTERVAL_MINUTES == 0 &&
+            prefs.getBoolean(KEY_PROMPT_CHEER_ENABLED, true)
+        ) {
+            text.append(REPORT_SEPARATOR)
+                .append(resolvePromptText(KEY_PROMPT_CHEER_TEXT, DEFAULT_PROMPT_CHEER_TEXT))
+        }
+        return text.toString()
+    }
+
+    private fun resolvePromptText(key: String, defaultValue: String): String =
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getString(key, defaultValue)
+            ?.takeIf { it.isNotBlank() } ?: defaultValue
 
     private fun formatTimeText(cal: Calendar): String {
         val hour = cal.get(Calendar.HOUR_OF_DAY)
@@ -445,6 +477,20 @@ class TimeKeeperService : Service() {
         const val KEY_VOLUME = "music_volume_percent"
         const val KEY_MUSIC_URI = "music_uri"
         const val KEY_MUSIC_NAME = "music_name"
+        const val KEY_PROMPT_ELAPSED_ENABLED = "prompt_elapsed_enabled"
+        const val KEY_PROMPT_WATER_ENABLED = "prompt_water_enabled"
+        const val KEY_PROMPT_CHEER_ENABLED = "prompt_cheer_enabled"
+        const val KEY_PROMPT_ELAPSED_TEXT = "prompt_elapsed_text"
+        const val KEY_PROMPT_WATER_TEXT = "prompt_water_text"
+        const val KEY_PROMPT_CHEER_TEXT = "prompt_cheer_text"
+        const val DEFAULT_PROMPT_ELAPSED_TEXT = "已完成 xx 分钟"
+        const val DEFAULT_PROMPT_WATER_TEXT = "请补充水分"
+        const val DEFAULT_PROMPT_CHEER_TEXT = "坚持运动，加油"
+        private const val ELAPSED_PROMPT_THRESHOLD_MINUTES = 10
+        private const val WATER_PROMPT_INTERVAL_MINUTES = 15
+        private const val CHEER_PROMPT_INTERVAL_MINUTES = 30
+        private const val ELAPSED_PLACEHOLDER = "xx"
+        private const val REPORT_SEPARATOR = "，"
         const val DEFAULT_INTERVAL = 5
         const val DEFAULT_VOLUME_PERCENT = 60
         const val MIN_INTERVAL = 1

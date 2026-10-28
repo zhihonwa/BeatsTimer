@@ -61,6 +61,9 @@ class MainActivity : Activity() {
         binding.pickMusicButton.setOnClickListener { pickMusic() }
         binding.clearMusicButton.setOnClickListener { clearMusic() }
         binding.stabilityButton.setOnClickListener { showStabilityDialog() }
+        binding.customizePromptText.setOnClickListener {
+            startActivity(Intent(this, VoicePromptActivity::class.java))
+        }
         binding.musicVolumeSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 binding.musicVolumeLabel.text =

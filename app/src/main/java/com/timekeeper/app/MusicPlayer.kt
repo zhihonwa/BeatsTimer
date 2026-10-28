@@ -77,6 +77,7 @@ class MusicPlayer(context: Context) {
                 setVolume(initial, initial)
                 prepare()
                 start()
+                setOnCompletionListener { mp -> restartForLoop(mp) }
             }
             playing = true
             ducked = false
@@ -101,6 +102,7 @@ class MusicPlayer(context: Context) {
                 setVolume(BUILTIN_VOLUME, BUILTIN_VOLUME)
                 prepare()
                 start()
+                setOnCompletionListener { mp -> restartForLoop(mp) }
             }
             playing = true
             ducked = false
@@ -108,6 +110,16 @@ class MusicPlayer(context: Context) {
             Log.w(TAG, "内置保活音轨启动失败", e)
             releasePlayer()
             playing = false
+        }
+    }
+
+    private fun restartForLoop(mp: MediaPlayer) {
+        if (!playing) return
+        try {
+            mp.seekTo(0)
+            mp.start()
+        } catch (e: Exception) {
+            Log.w(TAG, "音乐循环重播失败", e)
         }
     }
 
