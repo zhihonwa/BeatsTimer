@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">BeatsTimer</string>
     <string name="subtitle">选择动感音乐 · 开始运动计时</string>
-    <string name="label_interval">报时间隔</string>
+    <string name="label_interval">间隔</string>
     <string name="unit_minutes">分钟</string>
     <string name="default_interval">5</string>
     <string name="countdown_idle">--:--</string>
@@ -50,7 +50,10 @@
     <string name="about_intro_title">应用介绍</string>
     <string name="about_intro_body">BeatsTimer 是一款为运动场景设计的节奏音乐计时应用。它一边播放你喜欢的节奏音乐，一边按设定间隔用语音播报当前时间（如“9点5分”），还可选播报“已完成 xx 分钟”“请补充水分”“坚持运动，加油”等提示，让你跑步、骑行、健身时不必频繁看表也能掌握节奏。所有语音由系统离线 TTS 合成，无需联网。</string>
     <string name="about_usage_title">使用步骤</string>
-    <string name="about_usage_body">1. 设定“报时间隔”（分钟，默认 5）\n2. （可选）点击“选择运动音乐”挑选本地音乐，并拖动滑块调节音量\n3. 点击“开始报时”，立即播报当前时间，并开始播放音乐与计时\n4. 运行中可点击“暂停 / 恢复”暂停或继续计时与音乐\n5. 点击“定制”可勾选并编辑语音提示内容（默认全部开启）\n6. 点击“停止报时”结束本次报时并归零\n7. 若后台报时不稳定，点击“运行稳定性设置”逐项授权</string>
+    <string name="about_usage_body">1.只操作一次即可。点击底部行稳定性设置”，点击“逐项授权”。\n2.“选择运动音乐”挑选本地音乐，如何选择音乐请参考关于页面的“运动音乐 BPM 建议”\n3. 点击“开始报时”，立即播报当前时间，并开始播放音乐与计时\n  </string>
     <string name="about_bpm_title">运动音乐 BPM 建议</string>
-    <string name="about_bpm_body">运动的音乐节奏（BPM，每分钟节拍数）与步频越接近，越能带动步伐、提升耐力。推荐区间：\n\n慢走 / 散步：80–100 BPM\n快走：100–120 BPM\n慢跑：120–140 BPM\n常规跑步：140–160 BPM\n快跑 / 冲刺：160–180 BPM\n\n提示：先按自己的舒适步频选歌，再逐步提高音乐 BPM 来提升强度。</string>
+    <string name="about_bpm_body">运动的音乐节奏（BPM，每分钟节拍数）与步频越接近，越能带动步伐、提升耐力。推荐区间：\n\n慢走 / 散步：80–100 BPM\n快走：100–130 BPM\n慢跑：120–140 BPM\n常规跑步：140–160 BPM\n快跑：160–180 BPM\n\n提示：先按自己的舒适步频选歌，再逐步提高音乐 BPM 来提升强度。</string>
+    <string name="about_repo_title">开源与支持</string>
+    <string name="about_repo_body">本项目完全免费使用。如果它帮到了你，欢迎点亮一颗 Star 支持一下。</string>
+    <string name="about_repo_link">https://github.com/zhihonwa/BeatsTimer</string>
 </resources>
